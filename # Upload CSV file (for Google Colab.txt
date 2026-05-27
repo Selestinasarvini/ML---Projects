@@ -1,0 +1,84 @@
+# Upload CSV file (for Google Colab)-task 2
+from google.colab import files
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import re
+
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import mean_squared_error, r2_score
+
+# Step 1: Upload the file
+uploaded = files.upload()
+
+# Step 2: Load uploaded file
+for file_name in uploaded.keys():
+    csv_file = file_name
+
+# Step 3: Read the dataset with encoding fix
+df = pd.read_csv(csv_file, encoding='latin1')
+
+# Step 4: Show columns
+print("Columns:\n", df.columns)
+
+# Step 5: Drop rows with missing rating (target)
+df.dropna(subset=['Rating'], inplace=True)
+
+# Step 6: Convert 'Duration' from text like "2h 30min" to total minutes
+def convert_duration(duration_str):
+    if pd.isnull(duration_str):
+        return np.nan
+    match = re.findall(r'(\d+)', duration_str)
+    if not match:
+        return np.nan
+    minutes = 0
+    if 'h' in duration_str:
+        minutes += int(match[0]) * 60
+        if len(match) > 1:
+            minutes += int(match[1])
+    elif 'min' in duration_str:
+        minutes = int(match[0])
+    return minutes
+
+df['Duration'] = df['Duration'].apply(convert_duration)
+df['Duration'].fillna(df['Duration'].mean(), inplace=True)
+
+# Step 7: Fill missing numeric values (Votes)
+if 'Votes' in df.columns:
+    df['Votes'] = pd.to_numeric(df['Votes'], errors='coerce')
+    df['Votes'].fillna(df['Votes'].mean(), inplace=True)
+
+# Step 8: Encode categorical columns
+label_cols = ['Genre', 'Director', 'Actor 1', 'Actor 2', 'Actor 3']
+for col in label_cols:
+    if col in df.columns:
+        df[col] = LabelEncoder().fit_transform(df[col].astype(str))
+
+# Step 9: Prepare features and target
+features = ['Genre', 'Director', 'Actor 1', 'Actor 2', 'Actor 3', 'Duration', 'Votes']
+X = df[features]
+y = df['Rating']
+
+# Step 10: Train-test split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Step 11: Train the model
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+# Step 12: Predict and evaluate
+y_pred = model.predict(X_test)
+print("\nR² Score:", r2_score(y_test, y_pred))
+print("MSE:", mean_squared_error(y_test, y_pred))
+
+# Step 13: Plot results
+plt.scatter(y_test, y_pred, color='blue', alpha=0.6)
+plt.xlabel("Actual IMDB Rating")
+plt.ylabel("Predicted IMDB Rating")
+plt.title("Actual vs Predicted Ratings")
+plt.plot([y.min(), y.max()], [y.min(), y.max()], 'r--')  # Diagonal line
+
+plt.show()
