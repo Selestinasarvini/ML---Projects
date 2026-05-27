@@ -1,4 +1,4 @@
-# CodSoft-ML-Internship-Projects
+# ML-Projects
 Task 1: Titanic Survival Prediction
 Description
 This project uses the Titanic dataset to predict whether a passenger survived the disaster using logistic regression. It includes handling missing data, encoding, and model evaluation.
